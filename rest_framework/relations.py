@@ -280,7 +280,7 @@ class HyperlinkedRelatedField(RelatedField):
         attributes are not configured to correctly match the URL conf.
         """
         # Unsaved objects will not yet have a valid URL.
-        if hasattr(obj, 'pk') and obj.pk is None:
+        if hasattr(obj, 'pk') and obj.pk in (None, ''):
             return None
 
         lookup_value = getattr(obj, self.lookup_field)
@@ -325,14 +325,14 @@ class HyperlinkedRelatedField(RelatedField):
             self.fail('does_not_exist')
 
     def to_representation(self, value):
-        request = self.context.get('request', None)
-        format = self.context.get('format', None)
-
-        assert request is not None, (
+        assert 'request' in self.context, (
             "`%s` requires the request in the serializer"
             " context. Add `context={'request': request}` when instantiating "
             "the serializer." % self.__class__.__name__
         )
+
+        request = self.context['request']
+        format = self.context.get('format', None)
 
         # By default use whatever format is given for the current context
         # unless the target is a different type to the source.
@@ -397,7 +397,6 @@ class SlugRelatedField(RelatedField):
     A read-write field that represents the target of the relationship
     by a unique 'slug' attribute.
     """
-
     default_error_messages = {
         'does_not_exist': _('Object with {slug_name}={value} does not exist.'),
         'invalid': _('Invalid value.'),

@@ -47,14 +47,14 @@ You can then apply your new style to a view using the `.pagination_class` attrib
 
     class BillingRecordsView(generics.ListAPIView):
         queryset = Billing.objects.all()
-        serializer = BillingRecordsSerializer
+        serializer_class = BillingRecordsSerializer
         pagination_class = LargeResultsSetPagination
 
 Or apply the style globally, using the `DEFAULT_PAGINATION_CLASS` settings key. For example:
 
     REST_FRAMEWORK = {
         'DEFAULT_PAGINATION_CLASS': 'apps.core.pagination.StandardResultsSetPagination'
-        }
+    }
 
 ---
 

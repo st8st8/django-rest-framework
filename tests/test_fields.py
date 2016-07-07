@@ -3,9 +3,9 @@ import os
 import uuid
 from decimal import Decimal
 
-import django
 import pytest
 from django.http import QueryDict
+from django.test import TestCase, override_settings
 from django.utils import six, timezone
 
 import rest_framework
@@ -188,6 +188,24 @@ class TestInitial:
         assert self.serializer.data == {
             'initial_field': 123,
             'blank_field': None
+        }
+
+
+class TestInitialWithCallable:
+    def setup(self):
+        def initial_value():
+            return 123
+
+        class TestSerializer(serializers.Serializer):
+            initial_field = serializers.IntegerField(initial=initial_value)
+        self.serializer = TestSerializer()
+
+    def test_initial_should_accept_callable(self):
+        """
+        Follows the default ``Field.initial`` behaviour where they accept a
+        callable to produce the initial value"""
+        assert self.serializer.data == {
+            'initial_field': 123,
         }
 
 
@@ -877,6 +895,37 @@ class TestNoStringCoercionDecimalField(FieldValues):
     )
 
 
+class TestLocalizedDecimalField(TestCase):
+    @override_settings(USE_L10N=True, LANGUAGE_CODE='pl')
+    def test_to_internal_value(self):
+        field = serializers.DecimalField(max_digits=2, decimal_places=1, localize=True)
+        self.assertEqual(field.to_internal_value('1,1'), Decimal('1.1'))
+
+    @override_settings(USE_L10N=True, LANGUAGE_CODE='pl')
+    def test_to_representation(self):
+        field = serializers.DecimalField(max_digits=2, decimal_places=1, localize=True)
+        self.assertEqual(field.to_representation(Decimal('1.1')), '1,1')
+
+    def test_localize_forces_coerce_to_string(self):
+        field = serializers.DecimalField(max_digits=2, decimal_places=1, coerce_to_string=False, localize=True)
+        self.assertTrue(isinstance(field.to_representation(Decimal('1.1')), six.string_types))
+
+
+class TestNoDecimalPlaces(FieldValues):
+    valid_inputs = {
+        '0.12345': Decimal('0.12345'),
+    }
+    invalid_inputs = {
+        '0.1234567': ['Ensure that there are no more than 6 digits in total.']
+    }
+    outputs = {
+        '1.2345': '1.2345',
+        '0': '0',
+        '1.1': '1.1',
+    }
+    field = serializers.DecimalField(max_digits=6, decimal_places=None)
+
+
 # Date & time serializers...
 
 class TestDateField(FieldValues):
@@ -951,7 +1000,7 @@ class TestDateTimeField(FieldValues):
         datetime.datetime(2001, 1, 1, 13, 00): datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC()),
         datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC()): datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC()),
         # Django 1.4 does not support timezone string parsing.
-        '2001-01-01T14:00+01:00' if (django.VERSION > (1, 4)) else '2001-01-01T13:00Z': datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC())
+        '2001-01-01T13:00Z': datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC())
     }
     invalid_inputs = {
         'abc': ['Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z].'],
@@ -961,6 +1010,8 @@ class TestDateTimeField(FieldValues):
     outputs = {
         datetime.datetime(2001, 1, 1, 13, 00): '2001-01-01T13:00:00',
         datetime.datetime(2001, 1, 1, 13, 00, tzinfo=timezone.UTC()): '2001-01-01T13:00:00Z',
+        '2001-01-01T00:00:00': '2001-01-01T00:00:00',
+        six.text_type('2016-01-10T00:00:00'): '2016-01-10T00:00:00',
         None: None,
         '': None,
     }
@@ -1031,7 +1082,8 @@ class TestTimeField(FieldValues):
         '99:99': ['Time has wrong format. Use one of these formats instead: hh:mm[:ss[.uuuuuu]].'],
     }
     outputs = {
-        datetime.time(13, 00): '13:00:00',
+        datetime.time(13, 0): '13:00:00',
+        datetime.time(0, 0): '00:00:00',
         '00:00:00': '00:00:00',
         None: None,
         '': None,
@@ -1077,8 +1129,6 @@ class TestNoOutputFormatTimeField(FieldValues):
     field = serializers.TimeField(format=None)
 
 
-@pytest.mark.skipif(django.VERSION < (1, 8),
-                    reason='DurationField is only available for django1.8+')
 class TestDurationField(FieldValues):
     """
     Valid and invalid values for `DurationField`.
@@ -1097,8 +1147,7 @@ class TestDurationField(FieldValues):
     outputs = {
         datetime.timedelta(days=3, hours=8, minutes=32, seconds=1, microseconds=123): '3 08:32:01.000123',
     }
-    if django.VERSION >= (1, 8):
-        field = serializers.DurationField()
+    field = serializers.DurationField()
 
 
 # Choice types...

@@ -1,6 +1,5 @@
 from __future__ import unicode_literals
 
-import django
 import pytest
 from django.db import models
 from django.shortcuts import get_object_or_404
@@ -34,11 +33,13 @@ class Comment(RESTFrameworkModel):
 class BasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = BasicModel
+        fields = '__all__'
 
 
 class ForeignKeySerializer(serializers.ModelSerializer):
     class Meta:
         model = ForeignKeySource
+        fields = '__all__'
 
 
 class SlugSerializer(serializers.ModelSerializer):
@@ -158,7 +159,7 @@ class TestRootView(TestCase):
         self.assertIn(expected_error, response.rendered_content.decode('utf-8'))
 
 
-EXPECTED_QUERIES_FOR_PUT = 3 if django.VERSION < (1, 6) else 2
+EXPECTED_QUERIES_FOR_PUT = 2
 
 
 class TestInstanceView(TestCase):
@@ -415,6 +416,7 @@ class ClassASerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClassA
+        fields = '__all__'
 
 
 class ExampleView(generics.ListCreateAPIView):
@@ -462,6 +464,7 @@ class DynamicSerializerView(generics.ListCreateAPIView):
             class DynamicSerializer(serializers.ModelSerializer):
                 class Meta:
                     model = TwoFieldModel
+                    fields = '__all__'
         return DynamicSerializer
 
 

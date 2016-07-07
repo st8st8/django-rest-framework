@@ -105,7 +105,7 @@ using the `GenericAPIView` class based views.
 
     class UserListView(generics.ListAPIView):
         queryset = User.objects.all()
-        serializer = UserSerializer
+        serializer_class = UserSerializer
         filter_backends = (filters.DjangoFilterBackend,)
 
 ## Filtering and object lookups
@@ -257,7 +257,7 @@ The `SearchFilter` class will only be applied if the view has a `search_fields` 
 
     class UserListView(generics.ListAPIView):
         queryset = User.objects.all()
-        serializer = UserSerializer
+        serializer_class = UserSerializer
         filter_backends = (filters.SearchFilter,)
         search_fields = ('username', 'email')
 
@@ -380,7 +380,7 @@ A complete example using both `DjangoObjectPermissionsFilter` and `DjangoObjectP
     	'change' or 'delete' permissions.
 		"""
         queryset = Event.objects.all()
-        serializer = EventSerializer
+        serializer_class = EventSerializer
         filter_backends = (filters.DjangoObjectPermissionsFilter,)
         permission_classes = (myapp.permissions.CustomObjectPermissions,)
 
@@ -435,9 +435,9 @@ The [djangorestframework-word-filter][django-rest-framework-word-search-filter] 
 
 [cite]: https://docs.djangoproject.com/en/dev/topics/db/queries/#retrieving-specific-objects-with-filters
 [django-filter]: https://github.com/alex/django-filter
-[django-filter-docs]: https://django-filter.readthedocs.org/en/latest/index.html
-[guardian]: https://django-guardian.readthedocs.org/
-[view-permissions]: https://django-guardian.readthedocs.org/en/latest/userguide/assign.html
+[django-filter-docs]: https://django-filter.readthedocs.io/en/latest/index.html
+[guardian]: https://django-guardian.readthedocs.io/
+[view-permissions]: https://django-guardian.readthedocs.io/en/latest/userguide/assign.html
 [view-permissions-blogpost]: http://blog.nyaruka.com/adding-a-view-permission-to-django-models
 [nullbooleanselect]: https://github.com/django/django/blob/master/django/forms/widgets.py
 [search-django-admin]: https://docs.djangoproject.com/en/dev/ref/contrib/admin/#django.contrib.admin.ModelAdmin.search_fields

@@ -113,7 +113,7 @@ class TestPaginationIntegration:
         response = self.view(request)
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data == {
-            'detail': 'Invalid page "0": That page number is less than 1.'
+            'detail': 'Invalid page.'
         }
 
     def test_404_not_found_for_invalid_page(self):
@@ -121,7 +121,7 @@ class TestPaginationIntegration:
         response = self.view(request)
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.data == {
-            'detail': 'Invalid page "invalid": That page number is not an integer.'
+            'detail': 'Invalid page.'
         }
 
 
@@ -478,6 +478,19 @@ class TestLimitOffset:
         An invalid limit query param should be ignored in favor of the default.
         """
         request = Request(factory.get('/', {'limit': 'invalid', 'offset': 0}))
+        queryset = self.paginate_queryset(request)
+        content = self.get_paginated_content(queryset)
+        next_limit = self.pagination.default_limit
+        next_offset = self.pagination.default_limit
+        next_url = 'http://testserver/?limit={0}&offset={1}'.format(next_limit, next_offset)
+        assert queryset == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        assert content.get('next') == next_url
+
+    def test_zero_limit(self):
+        """
+        An zero limit query param should be ignored in favor of the default.
+        """
+        request = Request(factory.get('/', {'limit': 0, 'offset': 0}))
         queryset = self.paginate_queryset(request)
         content = self.get_paginated_content(queryset)
         next_limit = self.pagination.default_limit

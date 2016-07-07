@@ -3,13 +3,11 @@ Tests for content parsing, and form-overloaded content parsing.
 """
 from __future__ import unicode_literals
 
-import django
-import pytest
 from django.conf.urls import url
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import six
 
 from rest_framework import status
@@ -115,9 +113,8 @@ urlpatterns = [
 ]
 
 
+@override_settings(ROOT_URLCONF='tests.test_request')
 class TestContentParsingWithAuthentication(TestCase):
-    urls = 'tests.test_request'
-
     def setUp(self):
         self.csrf_client = APIClient(enforce_csrf_checks=True)
         self.username = 'john'
@@ -201,8 +198,6 @@ class TestAuthSetter(TestCase):
         self.assertEqual(request.auth, 'DUMMY')
 
 
-@pytest.mark.skipif(django.VERSION < (1, 7),
-                    reason='secure argument is only available for django1.7+')
 class TestSecure(TestCase):
 
     def test_default_secure_false(self):

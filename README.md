@@ -3,6 +3,7 @@
 [![build-status-image]][travis]
 [![coverage-status-image]][codecov]
 [![pypi-version]][pypi]
+[![Gitter](https://badges.gitter.im/tomchristie/django-rest-framework.svg)](https://gitter.im/tomchristie/django-rest-framework?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 **Awesome web-browsable Web APIs.**
 
@@ -10,9 +11,23 @@ Full documentation for the project is available at [http://www.django-rest-frame
 
 ---
 
-**Note**: We have now released Django REST framework 3.3. For older codebases you may want to refer to the version 2.4.4 [source code][2.4-code], and [documentation][2.4-docs].
+# Funding
 
-For more details see the 3.3 [announcement][3.3-announcement] and [release notes][3.3-release-notes].
+REST framework is a *collaboratively funded project*. If you use
+REST framework commercially we strongly encourage you to invest in its
+continued development by **[signing up for a paid plan][funding]**.
+
+The initial aim is to provide a single full-time position on REST framework.
+Right now we're over 58% of the way towards achieving that.
+*Every single sign-up makes a significant impact.*
+
+<p align="center">
+  <a href="http://jobs.rover.com/"><img src="https://raw.githubusercontent.com/tomchristie/django-rest-framework/master/docs/img/premium/rover-readme.png"/></a>
+  <a href="https://getsentry.com/welcome/"><img src="https://raw.githubusercontent.com/tomchristie/django-rest-framework/master/docs/img/premium/sentry-readme.png"/></a>
+  <a href="https://getstream.io/?utm_source=drf&utm_medium=banner&utm_campaign=drf"><img src="https://raw.githubusercontent.com/tomchristie/django-rest-framework/master/docs/img/premium/stream-readme.png"/></a>
+</p>
+
+*Many thanks to all our [wonderful sponsors][sponsors], and in particular to our premium backers, [Rover](http://jobs.rover.com/), [Sentry](https://getsentry.com/welcome/), and [Stream](https://getstream.io/?utm_source=drf&utm_medium=banner&utm_campaign=drf).*
 
 ---
 
@@ -37,7 +52,7 @@ There is a live example API for testing purposes, [available here][sandbox].
 # Requirements
 
 * Python (2.7, 3.2, 3.3, 3.4, 3.5)
-* Django (1.7, 1.8, 1.9)
+* Django (1.8, 1.9)
 
 # Installation
 
@@ -169,6 +184,9 @@ Send a description of the issue via email to [rest-framework-security@googlegrou
 [group]: https://groups.google.com/forum/?fromgroups#!forum/django-rest-framework
 [sandbox]: http://restframework.herokuapp.com/
 
+[funding]: https://fund.django-rest-framework.org/topics/funding/
+[sponsors]: https://fund.django-rest-framework.org/topics/funding/#our-sponsors
+
 [oauth1-section]: http://www.django-rest-framework.org/api-guide/authentication/#django-rest-framework-oauth
 [oauth2-section]: http://www.django-rest-framework.org/api-guide/authentication/#django-oauth-toolkit
 [serializer-section]: http://www.django-rest-framework.org/api-guide/serializers/#serializers
@@ -183,7 +201,3 @@ Send a description of the issue via email to [rest-framework-security@googlegrou
 
 [docs]: http://www.django-rest-framework.org/
 [security-mail]: mailto:rest-framework-security@googlegroups.com
-[2.4-code]: https://github.com/tomchristie/django-rest-framework/tree/version-2.4.x
-[2.4-docs]: http://tomchristie.github.io/rest-framework-2-docs/
-[3.3-announcement]: http://www.django-rest-framework.org/topics/3.3-announcement/
-[3.3-release-notes]: http://www.django-rest-framework.org/topics/release-notes/#33x-series

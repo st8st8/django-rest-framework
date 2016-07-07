@@ -4,6 +4,7 @@ from django.db import models
 from django.test import TestCase
 
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 
 def dedent(blocktext):
@@ -20,6 +21,21 @@ class UniquenessModel(models.Model):
 class UniquenessSerializer(serializers.ModelSerializer):
     class Meta:
         model = UniquenessModel
+        fields = '__all__'
+
+
+class RelatedModel(models.Model):
+    user = models.OneToOneField(UniquenessModel, on_delete=models.CASCADE)
+    email = models.CharField(unique=True, max_length=80)
+
+
+class RelatedModelSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username',
+        validators=[UniqueValidator(queryset=UniquenessModel.objects.all())])  # NOQA
+
+    class Meta:
+        model = RelatedModel
+        fields = ('username', 'email')
 
 
 class AnotherUniquenessModel(models.Model):
@@ -29,6 +45,19 @@ class AnotherUniquenessModel(models.Model):
 class AnotherUniquenessSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnotherUniquenessModel
+        fields = '__all__'
+
+
+class IntegerFieldModel(models.Model):
+    integer = models.IntegerField()
+
+
+class UniquenessIntegerSerializer(serializers.Serializer):
+    # Note that this field *deliberately* does not correspond with the model field.
+    # This allows us to ensure that `ValueError`, `TypeError` or `DataError` etc
+    # raised by a uniqueness check does not trigger a deceptive "this field is not unique"
+    # validation failure.
+    integer = serializers.CharField(validators=[UniqueValidator(queryset=IntegerFieldModel.objects.all())])
 
 
 class TestUniquenessValidation(TestCase):
@@ -73,6 +102,20 @@ class TestUniquenessValidation(TestCase):
         self.assertEqual(
             AnotherUniquenessModel._meta.get_field('code').validators, [])
 
+    def test_related_model_is_unique(self):
+        data = {'username': 'existing', 'email': 'new-email@example.com'}
+        rs = RelatedModelSerializer(data=data)
+        self.assertFalse(rs.is_valid())
+        self.assertEqual(rs.errors,
+                         {'username': ['This field must be unique.']})
+        data = {'username': 'new-username', 'email': 'new-email@example.com'}
+        rs = RelatedModelSerializer(data=data)
+        self.assertTrue(rs.is_valid())
+
+    def test_value_error_treated_as_not_unique(self):
+        serializer = UniquenessIntegerSerializer(data={'integer': 'abc'})
+        assert serializer.is_valid()
+
 
 # Tests for `UniqueTogetherValidator`
 # -----------------------------------
@@ -109,11 +152,13 @@ class NullUniquenessTogetherModel(models.Model):
 class UniquenessTogetherSerializer(serializers.ModelSerializer):
     class Meta:
         model = UniquenessTogetherModel
+        fields = '__all__'
 
 
 class NullUniquenessTogetherSerializer(serializers.ModelSerializer):
     class Meta:
         model = NullUniquenessTogetherModel
+        fields = '__all__'
 
 
 class TestUniquenessTogetherValidation(TestCase):
@@ -210,6 +255,45 @@ class TestUniquenessTogetherValidation(TestCase):
         """)
         assert repr(serializer) == expected
 
+    def test_ignore_read_only_fields(self):
+        """
+        When serializer fields are read only, then uniqueness
+        validators should not be added for that field.
+        """
+        class ReadOnlyFieldSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = UniquenessTogetherModel
+                fields = ('id', 'race_name', 'position')
+                read_only_fields = ('race_name',)
+
+        serializer = ReadOnlyFieldSerializer()
+        expected = dedent("""
+            ReadOnlyFieldSerializer():
+                id = IntegerField(label='ID', read_only=True)
+                race_name = CharField(read_only=True)
+                position = IntegerField(required=True)
+        """)
+        assert repr(serializer) == expected
+
+    def test_allow_explict_override(self):
+        """
+        Ensure validators can be explicitly removed..
+        """
+        class NoValidatorsSerializer(serializers.ModelSerializer):
+            class Meta:
+                model = UniquenessTogetherModel
+                fields = ('id', 'race_name', 'position')
+                validators = []
+
+        serializer = NoValidatorsSerializer()
+        expected = dedent("""
+            NoValidatorsSerializer():
+                id = IntegerField(label='ID', read_only=True)
+                race_name = CharField(max_length=100)
+                position = IntegerField()
+        """)
+        assert repr(serializer) == expected
+
     def test_ignore_validation_for_null_fields(self):
         # None values that are on fields which are part of the uniqueness
         # constraint cause the instance to ignore uniqueness validation.
@@ -250,6 +334,7 @@ class UniqueForDateModel(models.Model):
 class UniqueForDateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UniqueForDateModel
+        fields = '__all__'
 
 
 class TestUniquenessForDateValidation(TestCase):

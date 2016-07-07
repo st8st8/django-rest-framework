@@ -6,7 +6,8 @@ from django.utils import six
 from rest_framework import serializers
 from tests.models import (
     ForeignKeySource, ForeignKeyTarget, ManyToManySource, ManyToManyTarget,
-    NullableForeignKeySource, NullableOneToOneSource, OneToOneTarget
+    NullableForeignKeySource, NullableOneToOneSource,
+    NullableUUIDForeignKeySource, OneToOneTarget, UUIDForeignKeyTarget
 )
 
 
@@ -40,6 +41,18 @@ class ForeignKeySourceSerializer(serializers.ModelSerializer):
 class NullableForeignKeySourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NullableForeignKeySource
+        fields = ('id', 'name', 'target')
+
+
+# Nullable UUIDForeignKey
+class NullableUUIDForeignKeySourceSerializer(serializers.ModelSerializer):
+    target = serializers.PrimaryKeyRelatedField(
+        pk_field=serializers.UUIDField(),
+        queryset=UUIDForeignKeyTarget.objects.all(),
+        allow_null=True)
+
+    class Meta:
+        model = NullableUUIDForeignKeySource
         fields = ('id', 'name', 'target')
 
 
@@ -327,6 +340,18 @@ class PKForeignKeyTests(TestCase):
         serializer = NullableForeignKeySourceSerializer()
         self.assertEqual(serializer.data['target'], None)
 
+    def test_foreign_key_not_required(self):
+        """
+        Let's say we wanted to fill the non-nullable model field inside
+        Model.save(), we would make it empty and not required.
+        """
+        class ModelSerializer(ForeignKeySourceSerializer):
+            class Meta(ForeignKeySourceSerializer.Meta):
+                extra_kwargs = {'target': {'required': False}}
+        serializer = ModelSerializer(data={'name': 'test'})
+        serializer.is_valid(raise_exception=True)
+        self.assertNotIn('target', serializer.validated_data)
+
 
 class PKNullableForeignKeyTests(TestCase):
     def setUp(self):
@@ -431,6 +456,17 @@ class PKNullableForeignKeyTests(TestCase):
             {'id': 3, 'name': 'source-3', 'target': None}
         ]
         self.assertEqual(serializer.data, expected)
+
+    def test_null_uuid_foreign_key_serializes_as_none(self):
+        source = NullableUUIDForeignKeySource(name='Source')
+        serializer = NullableUUIDForeignKeySourceSerializer(source)
+        data = serializer.data
+        self.assertEqual(data["target"], None)
+
+    def test_nullable_uuid_foreign_key_is_valid_when_none(self):
+        data = {"name": "Source", "target": None}
+        serializer = NullableUUIDForeignKeySourceSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
 
 class PKNullableOneToOneTests(TestCase):

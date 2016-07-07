@@ -2,12 +2,12 @@ from __future__ import unicode_literals
 
 from django.conf.urls import url
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import six
 
 import rest_framework.utils.model_meta
+from rest_framework.compat import _resolve_model
 from rest_framework.utils.breadcrumbs import get_breadcrumbs
-from rest_framework.utils.model_meta import _resolve_model
 from rest_framework.views import APIView
 from tests.models import BasicModel
 
@@ -32,21 +32,26 @@ class NestedResourceInstance(APIView):
     pass
 
 
+class CustomNameResourceInstance(APIView):
+    def get_view_name(self):
+        return "Foo"
+
+
 urlpatterns = [
     url(r'^$', Root.as_view()),
     url(r'^resource/$', ResourceRoot.as_view()),
+    url(r'^resource/customname$', CustomNameResourceInstance.as_view()),
     url(r'^resource/(?P<key>[0-9]+)$', ResourceInstance.as_view()),
     url(r'^resource/(?P<key>[0-9]+)/$', NestedResourceRoot.as_view()),
     url(r'^resource/(?P<key>[0-9]+)/(?P<other>[A-Za-z]+)$', NestedResourceInstance.as_view()),
 ]
 
 
+@override_settings(ROOT_URLCONF='tests.test_utils')
 class BreadcrumbTests(TestCase):
     """
     Tests the breadcrumb functionality used by the HTML renderer.
     """
-    urls = 'tests.test_utils'
-
     def test_root_breadcrumbs(self):
         url = '/'
         self.assertEqual(
@@ -72,6 +77,17 @@ class BreadcrumbTests(TestCase):
                 ('Root', '/'),
                 ('Resource Root', '/resource/'),
                 ('Resource Instance', '/resource/123')
+            ]
+        )
+
+    def test_resource_instance_customname_breadcrumbs(self):
+        url = '/resource/customname'
+        self.assertEqual(
+            get_breadcrumbs(url),
+            [
+                ('Root', '/'),
+                ('Resource Root', '/resource/'),
+                ('Foo', '/resource/customname')
             ]
         )
 
@@ -150,16 +166,16 @@ class ResolveModelWithPatchedDjangoTests(TestCase):
 
     def setUp(self):
         """Monkeypatch get_model."""
-        self.get_model = rest_framework.utils.model_meta.apps.get_model
+        self.get_model = rest_framework.compat.apps.get_model
 
         def get_model(app_label, model_name):
             return None
 
-        rest_framework.utils.model_meta.apps.get_model = get_model
+        rest_framework.compat.apps.get_model = get_model
 
     def tearDown(self):
         """Revert monkeypatching."""
-        rest_framework.utils.model_meta.apps.get_model = self.get_model
+        rest_framework.compat.apps.get_model = self.get_model
 
     def test_blows_up_if_model_does_not_resolve(self):
         with self.assertRaises(ImproperlyConfigured):

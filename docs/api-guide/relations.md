@@ -489,7 +489,7 @@ See the Django documentation on [reverse relationships][reverse-relationships] f
 
 ## Generic relationships
 
-If you want to serialize a generic foreign key, you need to define a custom field, to determine explicitly how you want serialize the targets of the relationship.
+If you want to serialize a generic foreign key, you need to define a custom field, to determine explicitly how you want to serialize the targets of the relationship.
 
 For example, given the following model for a tag, which has a generic relationship with other arbitrary models:
 
@@ -507,7 +507,7 @@ For example, given the following model for a tag, which has a generic relationsh
         def __unicode__(self):
             return self.tag_name
 
-And the following two models, which may be have associated tags:
+And the following two models, which may have associated tags:
 
     class Bookmark(models.Model):
         """
@@ -580,9 +580,14 @@ The following third party packages are also available.
 
 The [drf-nested-routers package][drf-nested-routers] provides routers and relationship fields for working with nested resources.
 
+## Rest Framework Generic Relations
+
+The [rest-framework-generic-relations][drf-nested-relations] library provides read/write serialization for generic foreign keys.
+
 [cite]: http://lwn.net/Articles/193245/
 [reverse-relationships]: https://docs.djangoproject.com/en/dev/topics/db/queries/#following-relationships-backward
 [routers]: http://www.django-rest-framework.org/api-guide/routers#defaultrouter
 [generic-relations]: https://docs.djangoproject.com/en/dev/ref/contrib/contenttypes/#id1
 [2.2-announcement]: ../topics/2.2-announcement.md
 [drf-nested-routers]: https://github.com/alanjds/drf-nested-routers
+[drf-nested-relations]: https://github.com/Ian-Foote/rest-framework-generic-relations
