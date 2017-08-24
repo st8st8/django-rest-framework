@@ -28,8 +28,6 @@ class JSONEncoder(json.JSONEncoder):
             return force_text(obj)
         elif isinstance(obj, datetime.datetime):
             representation = obj.isoformat()
-            if obj.microsecond:
-                representation = representation[:23] + representation[26:]
             if representation.endswith('+00:00'):
                 representation = representation[:-6] + 'Z'
             return representation
@@ -57,6 +55,11 @@ class JSONEncoder(json.JSONEncoder):
         elif hasattr(obj, 'tolist'):
             # Numpy arrays and array scalars.
             return obj.tolist()
+        elif (coreapi is not None) and isinstance(obj, (coreapi.Document, coreapi.Error)):
+            raise RuntimeError(
+                'Cannot return a coreapi object from a JSON view. '
+                'You should be using a schema renderer instead for this view.'
+            )
         elif hasattr(obj, '__getitem__'):
             try:
                 return dict(obj)
@@ -64,9 +67,4 @@ class JSONEncoder(json.JSONEncoder):
                 pass
         elif hasattr(obj, '__iter__'):
             return tuple(item for item in obj)
-        elif (coreapi is not None) and isinstance(obj, (coreapi.Document, coreapi.Error)):
-            raise RuntimeError(
-                'Cannot return a coreapi object from a JSON view. '
-                'You should be using a schema renderer instead for this view.'
-            )
         return super(JSONEncoder, self).default(obj)

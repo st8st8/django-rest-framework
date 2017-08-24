@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import NoReverseMatch
+from rest_framework.compat import NoReverseMatch
 
 
 class MockObject(object):
@@ -19,6 +19,9 @@ class MockObject(object):
 class MockQueryset(object):
     def __init__(self, iterable):
         self.items = iterable
+
+    def __getitem__(self, val):
+        return self.items[val]
 
     def get(self, **lookup):
         for item in self.items:

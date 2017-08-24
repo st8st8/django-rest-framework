@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.utils.encoding import python_2_unicode_compatible
 
 from rest_framework.compat import apply_markdown
+from rest_framework.utils.formatting import dedent
 from rest_framework.views import APIView
 
 
@@ -59,7 +60,7 @@ class TestViewNamesAndDescriptions(TestCase):
         """
         class MockView(APIView):
             pass
-        self.assertEqual(MockView().get_view_name(), 'Mock')
+        assert MockView().get_view_name() == 'Mock'
 
     def test_view_description_uses_docstring(self):
         """Ensure view descriptions are based on the docstring."""
@@ -79,7 +80,7 @@ class TestViewNamesAndDescriptions(TestCase):
 
             # hash style header #"""
 
-        self.assertEqual(MockView().get_view_description(), DESCRIPTION)
+        assert MockView().get_view_description() == DESCRIPTION
 
     def test_view_description_can_be_empty(self):
         """
@@ -88,14 +89,14 @@ class TestViewNamesAndDescriptions(TestCase):
         """
         class MockView(APIView):
             pass
-        self.assertEqual(MockView().get_view_description(), '')
+        assert MockView().get_view_description() == ''
 
     def test_view_description_can_be_promise(self):
         """
         Ensure a view may have a docstring that is actually a lazily evaluated
         class that can be converted to a string.
 
-        See: https://github.com/tomchristie/django-rest-framework/issues/1708
+        See: https://github.com/encode/django-rest-framework/issues/1708
         """
         # use a mock object instead of gettext_lazy to ensure that we can't end
         # up with a test case string in our l10n catalog
@@ -110,7 +111,7 @@ class TestViewNamesAndDescriptions(TestCase):
         class MockView(APIView):
             __doc__ = MockLazyStr("a gettext string")
 
-        self.assertEqual(MockView().get_view_description(), 'a gettext string')
+        assert MockView().get_view_description() == 'a gettext string'
 
     def test_markdown(self):
         """
@@ -119,4 +120,12 @@ class TestViewNamesAndDescriptions(TestCase):
         if apply_markdown:
             gte_21_match = apply_markdown(DESCRIPTION) == MARKED_DOWN_gte_21
             lt_21_match = apply_markdown(DESCRIPTION) == MARKED_DOWN_lt_21
-            self.assertTrue(gte_21_match or lt_21_match)
+            assert gte_21_match or lt_21_match
+
+
+def test_dedent_tabs():
+    result = 'first string\n\nsecond string'
+    assert dedent("    first string\n\n    second string") == result
+    assert dedent("first string\n\n    second string") == result
+    assert dedent("\tfirst string\n\n\tsecond string") == result
+    assert dedent("first string\n\n\tsecond string") == result

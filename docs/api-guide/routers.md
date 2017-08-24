@@ -118,6 +118,26 @@ The above example would now generate the following URL pattern:
 
 * URL pattern: `^users/{pk}/change-password/$`  Name: `'user-change-password'`
 
+In the case you do not want to use the default name generated for your custom action, you can use the url_name parameter to customize it.
+
+For example, if you want to change the name of our custom action to `'user-change-password'`, you could write:
+
+    from myapp.permissions import IsAdminOrIsSelf
+    from rest_framework.decorators import detail_route
+    
+    class UserViewSet(ModelViewSet):
+        ...
+        
+        @detail_route(methods=['post'], permission_classes=[IsAdminOrIsSelf], url_name='change-password')
+        def set_password(self, request, pk=None):
+            ...
+
+The above example would now generate the following URL pattern:
+
+* URL pattern: `^users/{pk}/set_password/$`  Name: `'user-change-password'`
+
+You can also use url_path and url_name parameters together to obtain extra control on URL generation for custom views.
+
 For more information see the viewset documentation on [marking extra actions for routing][route-decorators].
 
 # API Guide
@@ -174,7 +194,7 @@ As with `SimpleRouter` the trailing slashes on the URL routes can be removed by 
 
 # Custom Routers
 
-Implementing a custom router isn't something you'd need to do very often, but it can be useful if you have specific requirements about how the your URLs for your API are structured.  Doing so allows you to encapsulate the URL structure in a reusable way that ensures you don't have to write your URL patterns explicitly for each new view.
+Implementing a custom router isn't something you'd need to do very often, but it can be useful if you have specific requirements about how the URLs for your API are structured.  Doing so allows you to encapsulate the URL structure in a reusable way that ensures you don't have to write your URL patterns explicitly for each new view.
 
 The simplest way to implement a custom router is to subclass one of the existing router classes.  The `.routes` attribute is used to template the URL patterns that will be mapped to each viewset. The `.routes` attribute is a list of `Route` named tuples.
 
@@ -250,7 +270,7 @@ Let's take a look at the routes our `CustomReadOnlyRouter` would generate for a 
         lookup_field = 'username'
 
         @detail_route()
-        def group_names(self, request):
+        def group_names(self, request, pk=None):
             """
             Returns a list of all the group names that the given
             user belongs to.

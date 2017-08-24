@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 
 import collections
+import json
 from collections import OrderedDict
 
 from django.utils.encoding import force_text
@@ -78,7 +79,17 @@ class BoundField(object):
         ))
 
     def as_form_field(self):
-        value = '' if (self.value is None or self.value is False) else force_text(self.value)
+        value = '' if (self.value is None or self.value is False) else self.value
+        return self.__class__(self._field, value, self.errors, self._prefix)
+
+
+class JSONBoundField(BoundField):
+    def as_form_field(self):
+        value = self.value
+        try:
+            value = json.dumps(self.value, sort_keys=True, indent=4)
+        except TypeError:
+            pass
         return self.__class__(self._field, value, self.errors, self._prefix)
 
 
@@ -101,7 +112,7 @@ class NestedBoundField(BoundField):
     def __getitem__(self, key):
         field = self.fields[key]
         value = self.value.get(key) if self.value else None
-        error = self.errors.get(key) if self.errors else None
+        error = self.errors.get(key) if isinstance(self.errors, dict) else None
         if hasattr(field, 'fields'):
             return NestedBoundField(field, value, error, prefix=self.name + '.')
         return BoundField(field, value, error, prefix=self.name + '.')

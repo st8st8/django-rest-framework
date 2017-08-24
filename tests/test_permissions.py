@@ -4,7 +4,6 @@ import base64
 import unittest
 
 from django.contrib.auth.models import Group, Permission, User
-from django.core.urlresolvers import ResolverMatch
 from django.db import models
 from django.test import TestCase
 
@@ -12,7 +11,7 @@ from rest_framework import (
     HTTP_HEADER_ENCODING, authentication, generics, permissions, serializers,
     status
 )
-from rest_framework.compat import guardian
+from rest_framework.compat import ResolverMatch, guardian, set_many
 from rest_framework.filters import DjangoObjectPermissionsFilter
 from rest_framework.routers import DefaultRouter
 from rest_framework.test import APIRequestFactory
@@ -74,15 +73,15 @@ class ModelPermissionsIntegrationTests(TestCase):
     def setUp(self):
         User.objects.create_user('disallowed', 'disallowed@example.com', 'password')
         user = User.objects.create_user('permitted', 'permitted@example.com', 'password')
-        user.user_permissions = [
+        set_many(user, 'user_permissions', [
             Permission.objects.get(codename='add_basicmodel'),
             Permission.objects.get(codename='change_basicmodel'),
             Permission.objects.get(codename='delete_basicmodel')
-        ]
+        ])
         user = User.objects.create_user('updateonly', 'updateonly@example.com', 'password')
-        user.user_permissions = [
+        set_many(user, 'user_permissions', [
             Permission.objects.get(codename='change_basicmodel'),
-        ]
+        ])
 
         self.permitted_credentials = basic_auth_header('permitted', 'password')
         self.disallowed_credentials = basic_auth_header('disallowed', 'password')
@@ -201,6 +200,15 @@ class ModelPermissionsIntegrationTests(TestCase):
         response = empty_list_view(request, pk=1)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_calling_method_not_allowed(self):
+        request = factory.generic('METHOD_NOT_ALLOWED', '/')
+        response = root_view(request)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+        request = factory.generic('METHOD_NOT_ALLOWED', '/1')
+        response = instance_view(request, pk='1')
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class BasicPermModel(models.Model):
     text = models.CharField(max_length=100)
@@ -238,6 +246,7 @@ class ObjectPermissionInstanceView(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [authentication.BasicAuthentication]
     permission_classes = [ViewObjectPermissions]
 
+
 object_permissions_view = ObjectPermissionInstanceView.as_view()
 
 
@@ -246,6 +255,7 @@ class ObjectPermissionListView(generics.ListAPIView):
     serializer_class = BasicPermSerializer
     authentication_classes = [authentication.BasicAuthentication]
     permission_classes = [ViewObjectPermissions]
+
 
 object_permissions_list_view = ObjectPermissionListView.as_view()
 
@@ -385,6 +395,11 @@ class ObjectPermissionsIntegrationTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertListEqual(response.data, [])
 
+    def test_cannot_method_not_allowed(self):
+        request = factory.generic('METHOD_NOT_ALLOWED', '/')
+        response = object_permissions_list_view(request)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 class BasicPerm(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -429,6 +444,7 @@ class DeniedObjectView(PermissionInstanceView):
 
 class DeniedObjectViewWithDetail(PermissionInstanceView):
     permission_classes = (BasicObjectPermWithDetail,)
+
 
 denied_view = DeniedView.as_view()
 

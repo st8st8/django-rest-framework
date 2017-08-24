@@ -6,7 +6,7 @@
 
 This document outlines our project management processes for REST framework.
 
-The aim is to ensure that the project has a high 
+The aim is to ensure that the project has a high
 ["bus factor"][bus-factor], and can continue to remain well supported for the foreseeable future. Suggestions for improvements to our process are welcome.
 
 ---
@@ -17,9 +17,9 @@ We have a quarterly maintenance cycle where new members may join the maintenance
 
 #### Current team
 
-The [maintenance team for Q4 2015](https://github.com/tomchristie/django-rest-framework/issues/2190):
+The [maintenance team for Q4 2015](https://github.com/encode/django-rest-framework/issues/2190):
 
-* [@tomchristie](https://github.com/tomchristie/)
+* [@tomchristie](https://github.com/encode/)
 * [@xordoquy](https://github.com/xordoquy/) (Release manager.)
 * [@carltongibson](https://github.com/carltongibson/)
 * [@kevin-brown](https://github.com/kevin-brown/)
@@ -38,27 +38,27 @@ Members of the maintenance team will be added as collaborators to the repository
 The following template should be used for the description of the issue, and serves as the formal process for selecting the team.
 
     This issue is for determining the maintenance team for the *** period.
-    
+
     Please see the [Project management](http://www.django-rest-framework.org/topics/project-management/) section of our documentation for more details.
-    
+
     ---
-    
+
     #### Renewing existing members.
-    
+
     The following people are the current maintenance team. Please checkmark your name if you wish to continue to have write permission on the repository for the *** period.
-    
+
     - [ ] @***
     - [ ] @***
     - [ ] @***
     - [ ] @***
     - [ ] @***
-    
+
     ---
-    
+
     #### New members.
-    
+
     If you wish to be considered for this or a future date, please comment against this or subsequent issues.
-    
+
     To modify this process for future maintenance cycles make a pull request to the [project management](http://www.django-rest-framework.org/topics/project-management/) documentation.
 
 #### Responsibilities of team members
@@ -104,9 +104,9 @@ The following template should be used for the description of the issue, and serv
 
     Checklist:
 
-    - [ ] Create pull request for [release notes](https://github.com/tomchristie/django-rest-framework/blob/master/docs/topics/release-notes.md) based on the [*.*.* milestone](https://github.com/tomchristie/django-rest-framework/milestones/***).
+    - [ ] Create pull request for [release notes](https://github.com/encode/django-rest-framework/blob/master/docs/topics/release-notes.md) based on the [*.*.* milestone](https://github.com/encode/django-rest-framework/milestones/***).
     - [ ] Update the translations from [transifex](http://www.django-rest-framework.org/topics/project-management/#translations).
-    - [ ] Ensure the pull request increments the version to `*.*.*` in [`restframework/__init__.py`](https://github.com/tomchristie/django-rest-framework/blob/master/rest_framework/__init__.py).
+    - [ ] Ensure the pull request increments the version to `*.*.*` in [`restframework/__init__.py`](https://github.com/encode/django-rest-framework/blob/master/rest_framework/__init__.py).
     - [ ] Confirm with @tomchristie that release is finalized and ready to go.
     - [ ] Ensure that release date is included in pull request.
     - [ ] Merge the release pull request.
@@ -116,7 +116,7 @@ The following template should be used for the description of the issue, and serv
     - [ ] Make a release announcement on the [discussion group](https://groups.google.com/forum/?fromgroups#!forum/django-rest-framework).
     - [ ] Make a release announcement on twitter.
     - [ ] Close the milestone on GitHub.
-    
+
     To modify this process for future releases make a pull request to the [project management](http://www.django-rest-framework.org/topics/project-management/) documentation.
 
 When pushing the release to PyPI ensure that your environment has been installed from our development `requirement.txt`, so that documentation and PyPI installs are consistently being built against a pinned set of packages.
@@ -165,7 +165,7 @@ Here's how differences between the old and new source files will be handled:
 When a translator has finished translating their work needs to be downloaded from Transifex into the REST framework repository. To do this, run:
 
     # 3. Pull the translated django.po files from Transifex.
-    tx pull -a
+    tx pull -a --minimum-perc 10
     cd rest_framework
     # 4. Compile the binary .mo files for all supported languages.
     django-admin.py compilemessages
@@ -197,10 +197,10 @@ The following issues still need to be addressed:
 * Document ownership and management of the security mailing list.
 
 [bus-factor]: http://en.wikipedia.org/wiki/Bus_factor
-[un-triaged]: https://github.com/tomchristie/django-rest-framework/issues?q=is%3Aopen+no%3Alabel
+[un-triaged]: https://github.com/encode/django-rest-framework/issues?q=is%3Aopen+no%3Alabel
 [transifex-project]: https://www.transifex.com/projects/p/django-rest-framework/
 [transifex-client]: https://pypi.python.org/pypi/transifex-client
 [translation-memory]: http://docs.transifex.com/guides/tm#let-tm-automatically-populate-translations
-[github-org]: https://github.com/tomchristie/django-rest-framework/issues/2162
+[github-org]: https://github.com/encode/django-rest-framework/issues/2162
 [sandbox]: http://restframework.herokuapp.com/
 [mailing-list]: https://groups.google.com/forum/#!forum/django-rest-framework

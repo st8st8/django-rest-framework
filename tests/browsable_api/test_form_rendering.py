@@ -11,6 +11,7 @@ factory = APIRequestFactory()
 class BasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = BasicModel
+        fields = '__all__'
 
 
 class ManyPostView(generics.GenericAPIView):
@@ -43,11 +44,11 @@ class TestManyPostView(TestCase):
         POST request to a view that returns a list of objects should
         still successfully return the browsable API with a rendered form.
 
-        Regression test for https://github.com/tomchristie/django-rest-framework/pull/3164
+        Regression test for https://github.com/encode/django-rest-framework/pull/3164
         """
         data = {}
         request = factory.post('/', data, format='json')
         with self.assertNumQueries(1):
             response = self.view(request).render()
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 3

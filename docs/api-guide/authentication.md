@@ -44,7 +44,7 @@ The default authentication schemes may be set globally, using the `DEFAULT_AUTHE
     }
 
 You can also set the authentication scheme on a per-view or per-viewset basis,
-using the `APIView` class based views.
+using the `APIView` class-based views.
 
     from rest_framework.authentication import SessionAuthentication, BasicAuthentication
     from rest_framework.permissions import IsAuthenticated
@@ -148,7 +148,7 @@ For clients to authenticate, the token key should be included in the `Authorizat
 If successfully authenticated, `TokenAuthentication` provides the following credentials.
 
 * `request.user` will be a Django `User` instance.
-* `request.auth` will be a `rest_framework.authtoken.models.BasicToken` instance.
+* `request.auth` will be a `rest_framework.authtoken.models.Token` instance.
 
 Unauthenticated responses that are denied permission will result in an `HTTP 401 Unauthorized` response with an appropriate WWW-Authenticate header.  For example:
 
@@ -222,6 +222,21 @@ It is also possible to create Tokens manually through admin interface. In case y
     TokenAdmin.raw_id_fields = ('user',)
 
 
+#### Using Django manage.py command
+
+Since version 3.6.4 it's possible to generate a user token using the following command:
+
+    ./manage.py drf_create_token <username>
+
+this command will return the API token for the given user, creating it if it doesn't exist:
+
+    Generated token 9944b09199c62bcf9418ad846dd0e4bbdfc6ee4b for user user1
+
+In case you want to regenerate the token (for example if it has been compromised or leaked) you can pass an additional parameter:
+
+    ./manage.py drf_create_token -r <username>
+
+
 ## SessionAuthentication
 
 This authentication scheme uses Django's default session backend for authentication.  Session authentication is appropriate for AJAX clients that are running in the same session context as your website.
@@ -238,6 +253,28 @@ If you're using an AJAX style API with SessionAuthentication, you'll need to mak
 **Warning**: Always use Django's standard login view when creating login pages. This will ensure your login views are properly protected.
 
 CSRF validation in REST framework works slightly differently to standard Django due to the need to support both session and non-session based authentication to the same views. This means that only authenticated requests require CSRF tokens, and anonymous requests may be sent without CSRF tokens. This behaviour is not suitable for login views, which should always have CSRF validation applied.
+
+
+## RemoteUserAuthentication
+
+This authentication scheme allows you to delegate authentication to your web server, which sets the `REMOTE_USER`
+environment variable.
+
+To use it, you must have `django.contrib.auth.backends.RemoteUserBackend` (or a subclass) in your
+`AUTHENTICATION_BACKENDS` setting. By default, `RemoteUserBackend` creates `User` objects for usernames that don't
+already exist. To change this and other behaviour, consult the
+[Django documentation](https://docs.djangoproject.com/en/stable/howto/auth-remote-user/).
+
+If successfully authenticated, `RemoteUserAuthentication` provides the following credentials:
+
+* `request.user` will be a Django `User` instance.
+* `request.auth` will be `None`.
+
+Consult your web server's documentation for information about configuring an authentication method, e.g.:
+
+* [Apache Authentication How-To](https://httpd.apache.org/docs/2.4/howto/auth.html)
+* [NGINX (Restricting Access)](https://www.nginx.com/resources/admin-guide/#restricting_access)
+
 
 # Custom authentication
 
@@ -300,7 +337,7 @@ Add the package to your `INSTALLED_APPS` and modify your REST framework settings
 
     REST_FRAMEWORK = {
         'DEFAULT_AUTHENTICATION_CLASSES': (
-            'oauth2_provider.ext.rest_framework.OAuth2Authentication',
+            'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
         )
     }
 
@@ -330,7 +367,7 @@ The [Django OAuth2 Consumer][doac] library from [Rediker Software][rediker] is a
 
 ## JSON Web Token Authentication
 
-JSON Web Token is a fairly new standard which can be used for token-based authentication. Unlike the built-in TokenAuthentication scheme, JWT Authentication doesn't need to use a database to validate a token. [Blimp][blimp] maintains the [djangorestframework-jwt][djangorestframework-jwt] package which provides a JWT Authentication class as well as a mechanism for clients to obtain a JWT given the username and password.
+JSON Web Token is a fairly new standard which can be used for token-based authentication. Unlike the built-in TokenAuthentication scheme, JWT Authentication doesn't need to use a database to validate a token. [Blimp][blimp] maintains the [djangorestframework-jwt][djangorestframework-jwt] package which provides a JWT Authentication class as well as a mechanism for clients to obtain a JWT given the username and password. An alternative package for JWT authentication is [djangorestframework-simplejwt][djangorestframework-simplejwt] which provides different features as well as a pluggable token blacklist app.
 
 ## Hawk HTTP Authentication
 
@@ -356,6 +393,10 @@ HTTP Signature (currently a [IETF draft][http-signature-ietf-draft]) provides a 
 
 [Django-rest-knox][django-rest-knox] library provides models and views to handle token based authentication in a more secure and extensible way than the built-in TokenAuthentication scheme - with Single Page Applications and Mobile clients in mind. It provides per-client tokens, and views to generate them when provided some other authentication (usually basic authentication), to delete the token (providing a server enforced logout) and to delete all tokens (logs out all clients that a user is logged into).
 
+## drfpasswordless
+
+[drfpasswordless][drfpasswordless] adds (Medium, Square Cash inspired) passwordless support to Django REST Framework's own TokenAuthentication scheme. Users log in and sign up with a token sent to a contact point like an email address or a mobile number.
+
 [cite]: http://jacobian.org/writing/rest-worst-practices/
 [http401]: http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.2
 [http403]: http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.4.4
@@ -363,7 +404,7 @@ HTTP Signature (currently a [IETF draft][http-signature-ietf-draft]) provides a 
 [oauth]: http://oauth.net/2/
 [permission]: permissions.md
 [throttling]: throttling.md
-[csrf-ajax]: https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
+[csrf-ajax]: https://docs.djangoproject.com/en/stable/ref/csrf/#ajax
 [mod_wsgi_official]: http://code.google.com/p/modwsgi/wiki/ConfigurationDirectives#WSGIPassAuthorization
 [django-oauth-toolkit-getting-started]: https://django-oauth-toolkit.readthedocs.io/en/latest/rest-framework/getting_started.html
 [django-rest-framework-oauth]: http://jpadilla.github.io/django-rest-framework-oauth/
@@ -384,6 +425,7 @@ HTTP Signature (currently a [IETF draft][http-signature-ietf-draft]) provides a 
 [doac-rest-framework]: https://github.com/Rediker-Software/doac/blob/master/docs/integrations.md#
 [blimp]: https://github.com/GetBlimp
 [djangorestframework-jwt]: https://github.com/GetBlimp/django-rest-framework-jwt
+[djangorestframework-simplejwt]: https://github.com/davesque/django-rest-framework-simplejwt
 [etoccalino]: https://github.com/etoccalino/
 [djangorestframework-httpsignature]: https://github.com/etoccalino/django-rest-framework-httpsignature
 [amazon-http-signature]: http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html
@@ -396,3 +438,4 @@ HTTP Signature (currently a [IETF draft][http-signature-ietf-draft]) provides a 
 [django-rest-auth]: https://github.com/Tivix/django-rest-auth
 [django-rest-framework-social-oauth2]: https://github.com/PhilipGarnero/django-rest-framework-social-oauth2
 [django-rest-knox]: https://github.com/James1345/django-rest-knox
+[drfpasswordless]: https://github.com/aaronn/django-rest-framework-passwordless

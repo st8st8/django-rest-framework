@@ -21,11 +21,14 @@ Pagination can be turned off by setting the pagination class to `None`.
 
 ## Setting the pagination style
 
-The default pagination style may be set globally, using the `DEFAULT_PAGINATION_CLASS` settings key. For example, to use the built-in limit/offset pagination, you would do:
+The default pagination style may be set globally, using the `DEFAULT_PAGINATION_CLASS` and `PAGE_SIZE` setting keys. For example, to use the built-in limit/offset pagination, you would do something like this:
 
     REST_FRAMEWORK = {
-        'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination'
+        'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+        'PAGE_SIZE': 100
     }
+
+Note that you need to set both the pagination class, and the page size that should be used.
 
 You can also set the pagination class on an individual view by using the `pagination_class` attribute. Typically you'll want to use the same pagination style throughout your API, although you might want to vary individual aspects of the pagination, such as default or maximum page size, on a per-view basis.
 
@@ -109,7 +112,7 @@ To set these attributes you should override the `PageNumberPagination` class, an
 
 ## LimitOffsetPagination
 
-This pagination style mirrors the syntax used when looking up multiple database records. The client includes both a "limit" and an 
+This pagination style mirrors the syntax used when looking up multiple database records. The client includes both a "limit" and an
 "offset" query parameter. The limit indicates the maximum number of items to return, and is equivalent to the `page_size` in other styles. The offset indicates the starting position of the query in relation to the complete set of unpaginated items.
 
 **Request**:
@@ -239,29 +242,6 @@ We'd then need to setup the custom class in our configuration:
 
 Note that if you care about how the ordering of keys is displayed in responses in the browsable API you might choose to use an `OrderedDict` when constructing the body of paginated responses, but this is optional.
 
-## Header based pagination
-
-Let's modify the built-in `PageNumberPagination` style, so that instead of include the pagination links in the body of the response, we'll instead include a `Link` header, in a [similar style to the GitHub API][github-link-pagination].
-
-    class LinkHeaderPagination(pagination.PageNumberPagination):
-        def get_paginated_response(self, data):
-            next_url = self.get_next_link()
-            previous_url = self.get_previous_link()
-
-            if next_url is not None and previous_url is not None:
-                link = '<{next_url}>; rel="next", <{previous_url}>; rel="prev"'
-            elif next_url is not None:
-                link = '<{next_url}>; rel="next"'
-            elif previous_url is not None:
-                link = '<{previous_url}>; rel="prev"'
-            else:
-                link = ''
-
-            link = link.format(next_url=next_url, previous_url=previous_url)
-            headers = {'Link': link} if link else {}
-
-            return Response(data, headers=headers)
-
 ## Using your custom pagination class
 
 To have your custom pagination class be used by default, use the `DEFAULT_PAGINATION_CLASS` setting:
@@ -272,6 +252,15 @@ To have your custom pagination class be used by default, use the `DEFAULT_PAGINA
     }
 
 API responses for list endpoints will now include a `Link` header, instead of including the pagination links as part of the body of the response, for example:
+
+## Pagination & schemas
+
+You can also make the pagination controls available to the schema autogeneration
+that REST framework provides, by implementing a `get_schema_fields()` method. This method should have the following signature:
+
+`get_schema_fields(self, view)`
+
+The method should return a list of `coreapi.Field` instances.
 
 ---
 
@@ -312,9 +301,19 @@ The following third party packages are also available.
 
 The [`DRF-extensions` package][drf-extensions] includes a [`PaginateByMaxMixin` mixin class][paginate-by-max-mixin] that allows your API clients to specify `?page_size=max` to obtain the maximum allowed page size.
 
-[cite]: https://docs.djangoproject.com/en/dev/topics/pagination/
+## drf-proxy-pagination
+
+The [`drf-proxy-pagination` package][drf-proxy-pagination] includes a `ProxyPagination` class which allows to choose pagination class with a query parameter.
+
+## link-header-pagination
+
+The [`django-rest-framework-link-header-pagination` package][drf-link-header-pagination] includes a `LinkHeaderPagination` class which provides pagination via an HTTP `Link` header as desribed in [Github's developer documentation](github-link-pagination).
+
+[cite]: https://docs.djangoproject.com/en/stable/topics/pagination/
 [github-link-pagination]: https://developer.github.com/guides/traversing-with-pagination/
 [link-header]: ../img/link-header-pagination.png
 [drf-extensions]: http://chibisov.github.io/drf-extensions/docs/
 [paginate-by-max-mixin]: http://chibisov.github.io/drf-extensions/docs/#paginatebymaxmixin
+[drf-proxy-pagination]: https://github.com/tuffnatty/drf-proxy-pagination
+[drf-link-header-pagination]: https://github.com/tbeadle/django-rest-framework-link-header-pagination
 [disqus-cursor-api]: http://cramer.io/2011/03/08/building-cursors-for-the-disqus-api

@@ -1,10 +1,13 @@
 import uuid
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
+from django.conf.urls import url
 from django.core.exceptions import ImproperlyConfigured
+from django.test import override_settings
 from django.utils.datastructures import MultiValueDict
 
-from rest_framework import serializers
+from rest_framework import relations, serializers
 from rest_framework.fields import empty
 from rest_framework.test import APISimpleTestCase
 
@@ -21,6 +24,61 @@ class TestStringRelatedField(APISimpleTestCase):
     def test_string_related_representation(self):
         representation = self.field.to_representation(self.instance)
         assert representation == '<MockObject name=foo, pk=1>'
+
+
+class MockApiSettings(object):
+    def __init__(self, cutoff, cutoff_text):
+        self.HTML_SELECT_CUTOFF = cutoff
+        self.HTML_SELECT_CUTOFF_TEXT = cutoff_text
+
+
+class TestRelatedFieldHTMLCutoff(APISimpleTestCase):
+    def setUp(self):
+        self.queryset = MockQueryset([
+            MockObject(pk=i, name=str(i)) for i in range(0, 1100)
+        ])
+        self.monkeypatch = MonkeyPatch()
+
+    def test_no_settings(self):
+        # The default is 1,000, so sans settings it should be 1,000 plus one.
+        for many in (False, True):
+            field = serializers.PrimaryKeyRelatedField(queryset=self.queryset,
+                                                       many=many)
+            options = list(field.iter_options())
+            assert len(options) == 1001
+            assert options[-1].display_text == "More than 1000 items..."
+
+    def test_settings_cutoff(self):
+        self.monkeypatch.setattr(relations, "api_settings",
+                                 MockApiSettings(2, "Cut Off"))
+        for many in (False, True):
+            field = serializers.PrimaryKeyRelatedField(queryset=self.queryset,
+                                                       many=many)
+            options = list(field.iter_options())
+            assert len(options) == 3  # 2 real items plus the 'Cut Off' item.
+            assert options[-1].display_text == "Cut Off"
+
+    def test_settings_cutoff_none(self):
+        # Setting it to None should mean no limit; the default limit is 1,000.
+        self.monkeypatch.setattr(relations, "api_settings",
+                                 MockApiSettings(None, "Cut Off"))
+        for many in (False, True):
+            field = serializers.PrimaryKeyRelatedField(queryset=self.queryset,
+                                                       many=many)
+            options = list(field.iter_options())
+            assert len(options) == 1100
+
+    def test_settings_kwargs_cutoff(self):
+        # The explicit argument should override the settings.
+        self.monkeypatch.setattr(relations, "api_settings",
+                                 MockApiSettings(2, "Cut Off"))
+        for many in (False, True):
+            field = serializers.PrimaryKeyRelatedField(queryset=self.queryset,
+                                                       many=many,
+                                                       html_cutoff=100)
+            options = list(field.iter_options())
+            assert len(options) == 101
+            assert options[-1].display_text == "Cut Off"
 
 
 class TestPrimaryKeyRelatedField(APISimpleTestCase):
@@ -87,16 +145,41 @@ class TestProxiedPrimaryKeyRelatedField(APISimpleTestCase):
         assert representation == self.instance.pk.int
 
 
+@override_settings(ROOT_URLCONF=[
+    url(r'^example/(?P<name>.+)/$', lambda: None, name='example'),
+])
 class TestHyperlinkedRelatedField(APISimpleTestCase):
     def setUp(self):
+        self.queryset = MockQueryset([
+            MockObject(pk=1, name='foobar'),
+            MockObject(pk=2, name='bazABCqux'),
+        ])
         self.field = serializers.HyperlinkedRelatedField(
-            view_name='example', read_only=True)
+            view_name='example',
+            lookup_field='name',
+            lookup_url_kwarg='name',
+            queryset=self.queryset,
+        )
         self.field.reverse = mock_reverse
         self.field._context = {'request': True}
 
     def test_representation_unsaved_object_with_non_nullable_pk(self):
         representation = self.field.to_representation(MockObject(pk=''))
         assert representation is None
+
+    def test_hyperlinked_related_lookup_exists(self):
+        instance = self.field.to_internal_value('http://example.org/example/foobar/')
+        assert instance is self.queryset.items[0]
+
+    def test_hyperlinked_related_lookup_url_encoded_exists(self):
+        instance = self.field.to_internal_value('http://example.org/example/baz%41%42%43qux/')
+        assert instance is self.queryset.items[1]
+
+    def test_hyperlinked_related_lookup_does_not_exist(self):
+        with pytest.raises(serializers.ValidationError) as excinfo:
+            self.field.to_internal_value('http://example.org/example/doesnotexist/')
+        msg = excinfo.value.detail[0]
+        assert msg == 'Invalid hyperlink - Object does not exist.'
 
 
 class TestHyperlinkedIdentityField(APISimpleTestCase):

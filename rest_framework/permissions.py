@@ -5,6 +5,9 @@ from __future__ import unicode_literals
 
 from django.http import Http404
 
+from rest_framework import exceptions
+from rest_framework.compat import is_authenticated
+
 SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
 
 
@@ -44,7 +47,7 @@ class IsAuthenticated(BasePermission):
     """
 
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated()
+        return request.user and is_authenticated(request.user)
 
 
 class IsAdminUser(BasePermission):
@@ -65,7 +68,7 @@ class IsAuthenticatedOrReadOnly(BasePermission):
         return (
             request.method in SAFE_METHODS or
             request.user and
-            request.user.is_authenticated()
+            is_authenticated(request.user)
         )
 
 
@@ -105,6 +108,10 @@ class DjangoModelPermissions(BasePermission):
             'app_label': model_cls._meta.app_label,
             'model_name': model_cls._meta.model_name
         }
+
+        if method not in self.perms_map:
+            raise exceptions.MethodNotAllowed(method)
+
         return [perm % kwargs for perm in self.perms_map[method]]
 
     def has_permission(self, request, view):
@@ -115,6 +122,9 @@ class DjangoModelPermissions(BasePermission):
 
         if hasattr(view, 'get_queryset'):
             queryset = view.get_queryset()
+            assert queryset is not None, (
+                '{}.get_queryset() returned None'.format(view.__class__.__name__)
+            )
         else:
             queryset = getattr(view, 'queryset', None)
 
@@ -127,7 +137,7 @@ class DjangoModelPermissions(BasePermission):
 
         return (
             request.user and
-            (request.user.is_authenticated() or not self.authenticated_users_only) and
+            (is_authenticated(request.user) or not self.authenticated_users_only) and
             request.user.has_perms(perms)
         )
 
@@ -166,6 +176,10 @@ class DjangoObjectPermissions(DjangoModelPermissions):
             'app_label': model_cls._meta.app_label,
             'model_name': model_cls._meta.model_name
         }
+
+        if method not in self.perms_map:
+            raise exceptions.MethodNotAllowed(method)
+
         return [perm % kwargs for perm in self.perms_map[method]]
 
     def has_object_permission(self, request, view, obj):

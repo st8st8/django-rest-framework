@@ -15,6 +15,7 @@ import sys
 from django.conf import settings
 from django.http import QueryDict
 from django.http.multipartparser import parse_header
+from django.http.request import RawPostDataException
 from django.utils import six
 from django.utils.datastructures import MultiValueDict
 
@@ -151,7 +152,7 @@ class Request(object):
 
         force_user = getattr(request, '_force_auth_user', None)
         force_token = getattr(request, '_force_auth_token', None)
-        if (force_user is not None or force_token is not None):
+        if force_user is not None or force_token is not None:
             forced_auth = ForcedAuthentication(force_user, force_token)
             self.authenticators = (forced_auth,)
 
@@ -249,6 +250,10 @@ class Request(object):
             else:
                 self._full_data = self._data
 
+            # copy files refs to the underlying request so that closable
+            # objects are handled appropriately.
+            self._request._files = self._files
+
     def _load_stream(self):
         """
         Return the content body of the request, as a stream.
@@ -263,10 +268,20 @@ class Request(object):
 
         if content_length == 0:
             self._stream = None
-        elif hasattr(self._request, 'read'):
+        elif not self._request._read_started:
             self._stream = self._request
         else:
-            self._stream = six.BytesIO(self.raw_post_data)
+            self._stream = six.BytesIO(self.body)
+
+    def _supports_form_parsing(self):
+        """
+        Return True if this requests supports parsing form data.
+        """
+        form_media = (
+            'application/x-www-form-urlencoded',
+            'multipart/form-data'
+        )
+        return any([parser.media_type in form_media for parser in self.parsers])
 
     def _parse(self):
         """
@@ -274,11 +289,24 @@ class Request(object):
 
         May raise an `UnsupportedMediaType`, or `ParseError` exception.
         """
-        stream = self.stream
         media_type = self.content_type
+        try:
+            stream = self.stream
+        except RawPostDataException:
+            if not hasattr(self._request, '_post'):
+                raise
+            # If request.POST has been accessed in middleware, and a method='POST'
+            # request was made with 'multipart/form-data', then the request stream
+            # will already have been exhausted.
+            if self._supports_form_parsing():
+                return (self._request.POST, self._request.FILES)
+            stream = None
 
         if stream is None or media_type is None:
-            empty_data = QueryDict('', encoding=self._request._encoding)
+            if media_type and not is_form_media_type(media_type):
+                empty_data = QueryDict('', encoding=self._request._encoding)
+            else:
+                empty_data = {}
             empty_files = MultiValueDict()
             return (empty_data, empty_files)
 
@@ -311,7 +339,6 @@ class Request(object):
         """
         Attempt to authenticate the request using each authentication instance
         in turn.
-        Returns a three-tuple of (authenticator, user, authtoken).
         """
         for authenticator in self.authenticators:
             try:
@@ -329,10 +356,9 @@ class Request(object):
 
     def _not_authenticated(self):
         """
-        Return a three-tuple of (authenticator, user, authtoken), representing
-        an unauthenticated request.
+        Set authenticator, user & authtoken representing an unauthenticated request.
 
-        By default this will be (None, AnonymousUser, None).
+        Defaults are None, AnonymousUser & None.
         """
         self._authenticator = None
 
@@ -373,7 +399,7 @@ class Request(object):
         if not _hasattr(self, '_data'):
             self._load_data_and_files()
         if is_form_media_type(self.content_type):
-            return self.data
+            return self._data
         return QueryDict('', encoding=self._request._encoding)
 
     @property
@@ -391,3 +417,8 @@ class Request(object):
             '`request.QUERY_PARAMS` has been deprecated in favor of `request.query_params` '
             'since version 3.0, and has been fully removed as of version 3.2.'
         )
+
+    def force_plaintext_errors(self, value):
+        # Hack to allow our exception handler to force choice of
+        # plaintext or html error responses.
+        self._request.is_ajax = lambda: value
